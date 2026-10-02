@@ -412,10 +412,10 @@ function mountWindowTheme(actor, root) {
 function mountHeader(actor, root, editable) {
   const character = root.querySelector(".character") ?? root;
   const bio = character.querySelector(":scope > .bio.border, .bio.border") ?? character.querySelector(".bio");
-  if (!(bio instanceof HTMLElement) || bio.querySelector(".fbm-header-panel")) return;
+  if (!(bio instanceof HTMLElement) || bio.querySelector("[data-fbm-header-panel]")) return;
   bio.innerHTML = renderHeader(actor, editable);
   bio.classList.add("fbm-mortar-bio");
-  bindHeader(actor, bio.querySelector(".fbm-header-panel"), editable);
+  bindHeader(actor, bio.querySelector("[data-fbm-header-panel]"), editable);
 }
 
 function mountMainStatus(actor, root, editable) {
