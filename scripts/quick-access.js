@@ -41,6 +41,20 @@ function registerWith(api) {
   return true;
 }
 
+export function applyQuickAccessTalentTooltips(actor, root) {
+  if (!actor || !(root instanceof HTMLElement)) return false;
+  const api = game.modules.get("fbl-quick-access")?.api;
+  if (!api?.capabilities?.itemTooltips || typeof api.setupTalentItemTooltips !== "function") return false;
+
+  try {
+    api.setupTalentItemTooltips(actor, root);
+    return true;
+  } catch (error) {
+    console.warn(`${MODULE_ID} | Quick Access talent tooltip integration failed`, error);
+    return false;
+  }
+}
+
 export function initializeQuickAccessIntegration() {
   const api = game.modules.get("fbl-quick-access")?.api;
   if (registerWith(api)) return;
