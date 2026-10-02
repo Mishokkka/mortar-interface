@@ -5,7 +5,8 @@
  */
 
 .fbm-mortar-window,
-.fbm-mortar-sheet {
+.fbm-mortar-sheet,
+.fbm-mortar-dialog-window {
   --fbm-font: "Anonymous Pro", "Courier New", monospace;
   --fbm-bg: #020704;
   --fbm-bg-deep: #000201;
