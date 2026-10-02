@@ -32,9 +32,21 @@ Hooks.once("init", () => {
   Hooks.callAll("fblMortarInterface.apiReady", module.api);
 });
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   installRollIntegration();
   initializeQuickAccessIntegration();
+
+  // Actors that already had Mechanical Body before the module was enabled may
+  // still carry biological condition effects. Clear them once on startup.
+  for (const actor of game.actors?.contents ?? []) {
+    if (!actor?.isOwner || !isMortarActor(actor)) continue;
+    try {
+      await clearBiologicalConditions(actor);
+    } catch (error) {
+      console.warn(`${MODULE_ID} | failed to clear biological conditions for ${actor.name}`, error);
+    }
+  }
+
   console.log(`${MODULE_ID} | ready for Foundry ${game.version}, Forbidden Lands ${game.system.version}`);
 });
 
@@ -65,10 +77,21 @@ Hooks.on("createItem", async (item) => {
   if (isMortarActor(actor)) scheduleActorSheetRender(actor);
 });
 
-Hooks.on("updateItem", (item, changes) => {
+Hooks.on("updateItem", async (item, changes) => {
   const actor = item.parent;
+  if (actor?.documentName !== "Actor") return;
+
+  // Renaming a Talent can turn Mortar mode on or off. Always rerender character
+  // sheets for Talent name changes, even when the new name is no longer the
+  // Mechanical Body marker.
+  if (item.type === "talent" && changes.name !== undefined) {
+    if (isMortarTalent(item)) await clearBiologicalConditions(actor);
+    scheduleActorSheetRender(actor);
+    return;
+  }
+
   if (!isMortarActor(actor)) return;
-  if (changes.name !== undefined || changes.system?.rank !== undefined || changes["system.rank"] !== undefined || changes.flags?.[MODULE_ID] !== undefined) {
+  if (changes.system?.rank !== undefined || changes["system.rank"] !== undefined || changes.flags?.[MODULE_ID] !== undefined) {
     scheduleActorSheetRender(actor);
   }
 });
@@ -76,7 +99,7 @@ Hooks.on("updateItem", (item, changes) => {
 Hooks.on("deleteItem", (item) => {
   const actor = item.parent;
   if (actor?.documentName !== "Actor") return;
-  scheduleActorSheetRender(actor);
+  if (isMortarActor(actor) || isMortarTalent(item)) scheduleActorSheetRender(actor);
 });
 
 Hooks.on("createChatMessage", (message) => {
