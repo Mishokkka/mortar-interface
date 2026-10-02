@@ -27,6 +27,7 @@ import {
   upgradeProtocol
 } from "./actions.js";
 import { applyThemeClass, getInterfaceTheme } from "./settings.js";
+import { applyQuickAccessTalentTooltips } from "./quick-access.js";
 
 const APP_STATE = new WeakMap();
 
@@ -56,37 +57,6 @@ function rankDots(rank) {
   return Array.from({ length: 5 }, (_, index) => `<span class="fbm-rank-dot ${index < rank ? "is-on" : ""}">${index + 1}</span>`).join("");
 }
 
-function renderHeader(actor, editable) {
-  const state = getMortarState(actor);
-  const band = getOverloadBand(actor, state);
-  const passive = state.passive && PROTOCOLS[state.passive]?.passive?.name ? PROTOCOLS[state.passive].passive.name : "—";
-  const wpValue = Math.max(0, Number(actor.system?.bio?.willpower?.value) || 0);
-  const wpMax = Math.max(0, Number(actor.system?.bio?.willpower?.max) || 10);
-  const reputation = Math.max(0, Number(actor.system?.bio?.reputation?.value) || 0);
-  const experience = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
-  const kin = actor.system?.bio?.kin?.value ?? "Мортар";
-  return `
-    <section class="fbm-header-compact" data-fbm-header-panel="true">
-      <div class="fbm-header-compact__avatar ${editable ? "is-editable" : ""}">
-        <img src="${escapeHtml(actor.img)}" alt="${escapeHtml(actor.name)}" data-fbm-avatar-image>
-        ${editable ? `<button type="button" class="fbm-avatar-edit" data-fbm-change-img title="Изменить портрет"><i class="fas fa-image"></i></button>` : ""}
-      </div>
-      <div class="fbm-header-compact__grid">
-        <label class="fbm-field fbm-field--name"><span>NAME</span><input type="text" data-fbm-actor-path="name" value="${escapeHtml(actor.name)}" ${editable ? "" : "disabled"}></label>
-        <label class="fbm-field fbm-field--frame"><span>FRAME</span><input type="text" data-fbm-actor-path="system.bio.kin.value" value="${escapeHtml(kin)}" ${editable ? "" : "disabled"}></label>
-        <div class="fbm-field fbm-field--num fbm-field--reputation">
-          <button type="button" class="fbm-field-label" data-fbm-roll-reputation title="Roll Reputation" ${reputation > 0 && editable ? "" : "disabled"}><i class="fas fa-dice"></i> REP</button>
-          <input type="number" min="0" step="1" data-fbm-actor-path="system.bio.reputation.value" value="${reputation}" ${editable ? "" : "disabled"}>
-        </div>
-        <label class="fbm-field fbm-field--num"><span>EXP</span><input type="number" min="0" step="1" data-fbm-actor-path="system.bio.experience.value" value="${experience}" ${editable ? "" : "disabled"}></label>
-        <label class="fbm-field fbm-field--wp"><span>WP</span><div class="fbm-wp-inline"><input type="number" min="0" max="${wpMax}" step="1" data-fbm-actor-path="system.bio.willpower.value" value="${wpValue}" ${editable ? "" : "disabled"}><small>/ ${wpMax}</small></div></label>
-        <label class="fbm-field fbm-field--awakening"><span>AWK</span><input type="text" data-fbm-awakening value="${escapeHtml(state.awakeningDate)}" placeholder="дата / год" ${editable ? "" : "disabled"}></label>
-        <div class="fbm-field fbm-field--status"><span>STATUS</span><strong class="fbm-band fbm-band--${band.key}">${band.label}</strong></div>
-        <div class="fbm-field fbm-field--passive"><span>PASSIVE</span><strong>${escapeHtml(passive)}</strong></div>
-      </div>
-    </section>`;
-}
-
 function renderOverloadRail(actor) {
   const state = getMortarState(actor);
   const band = getOverloadBand(actor, state);
@@ -114,6 +84,9 @@ function renderStatus(actor, editable) {
   const state = getMortarState(actor);
   const band = getOverloadBand(actor, state);
   const armor = getIntegratedArmor(actor, state);
+  const passive = state.passive && PROTOCOLS[state.passive]?.passive?.name
+    ? PROTOCOLS[state.passive].passive.name
+    : "—";
   const thermalButtons = ["cold", "normal", "heat"].map((mode) => `<button type="button" class="fbm-chip ${state.thermal === mode ? "is-active" : ""}" data-fbm-thermal="${mode}" ${editable ? "" : "disabled"}>${mode.toUpperCase()}</button>`).join("");
   return `
     <section class="fbm-system-status" data-fbm-system-status="true">
@@ -124,10 +97,13 @@ function renderStatus(actor, editable) {
         <div><span>STRUCT STR</span><strong>${state.structuralDamage.strength}</strong></div>
         <div><span>STRUCT AGI</span><strong>${state.structuralDamage.agility}</strong></div>
       </div>
+      <div class="fbm-status-meta">
+        <label><span>AWAKENING</span><input type="text" data-fbm-awakening value="${escapeHtml(state.awakeningDate)}" placeholder="дата / год" ${editable ? "" : "disabled"}></label>
+        <div><span>PASSIVE</span><strong>${escapeHtml(passive)}</strong></div>
+      </div>
       <div class="fbm-thermal-row"><span>THERMAL</span>${thermalButtons}</div>
     </section>`;
 }
-
 function renderRankRow(key, rank, learnedRank, ability, editable) {
   const unlocked = rank <= learnedRank;
   const supersededRecoveryMode = key === "recovery" && ((rank === 3 && learnedRank >= 4) || (rank === 4 && learnedRank >= 5));
@@ -179,7 +155,7 @@ function renderAuxTalents(actor, snapshot, editable) {
   return talents.map((item) => `
     <div class="fbm-aux-item" data-item-id="${item.id}">
       <img src="${escapeHtml(item.img)}" alt="">
-      <strong>${escapeHtml(item.name)}</strong>
+      <strong class="item-name">${escapeHtml(item.name)}</strong>
       <span>R${Number(item.system?.rank) || 0}</span>
       ${editable ? `<button type="button" data-fbm-open-item="${item.id}" title="Edit Talent"><i class="fas fa-edit"></i></button>` : ""}
       <button type="button" data-fbm-post-item="${item.id}" title="Post Talent"><i class="fas fa-comment"></i></button>
@@ -374,67 +350,14 @@ function mountTalentConsole(app, actor, root, editable) {
 
   host.innerHTML = renderProtocols(actor, editable);
   const consoleRoot = host.querySelector(".fbm-console");
-  if (consoleRoot) bindConsole(app, actor, consoleRoot, editable);
+  if (consoleRoot) {
+    bindConsole(app, actor, consoleRoot, editable);
+    applyQuickAccessTalentTooltips(actor, consoleRoot);
+  }
 
   const nav = root.querySelector(".sheet-tabs");
   const navButton = nav?.querySelector?.('[data-tab="talent"]');
   if (navButton) navButton.textContent = "PROTOCOLS";
-}
-
-function bindHeader(app, actor, headerRoot, editable) {
-  if (!(headerRoot instanceof HTMLElement)) return;
-  if (!editable) return;
-
-  for (const input of headerRoot.querySelectorAll('[data-fbm-actor-path]')) {
-    input.addEventListener('change', async () => {
-      const path = input.dataset.fbmActorPath;
-      if (!path) return;
-      let value = input.type === "number" ? Math.trunc(Number(input.value) || 0) : String(input.value ?? "");
-      if (input.type === "number") {
-        const min = input.min === "" ? Number.NEGATIVE_INFINITY : Number(input.min);
-        const max = input.max === "" ? Number.POSITIVE_INFINITY : Number(input.max);
-        value = Math.max(min, Math.min(max, value));
-        input.value = String(value);
-      }
-      await actor.update({ [path]: value }, { render: false });
-      if (path === "system.bio.reputation.value") {
-        const rollButton = headerRoot.querySelector("[data-fbm-roll-reputation]");
-        if (rollButton) rollButton.disabled = Number(value) <= 0;
-      }
-    });
-  }
-
-  const awakening = headerRoot.querySelector('[data-fbm-awakening]');
-  awakening?.addEventListener('change', () => setAwakeningDate(actor, awakening.value));
-
-  headerRoot.querySelector("[data-fbm-roll-reputation]")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if ((Number(actor.system?.bio?.reputation?.value) || 0) > 0) void app?.rollReputation?.();
-  });
-
-  const changeImg = async () => {
-    const FilePickerApp = globalThis.FilePicker;
-    if (!FilePickerApp) return ui.notifications?.warn?.('FilePicker unavailable.');
-    const picker = new FilePickerApp({
-      type: 'image',
-      current: actor.img,
-      callback: async (path) => actor.update({ img: path })
-    });
-    return picker.browse();
-  };
-
-  headerRoot.querySelector('[data-fbm-change-img]')?.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void changeImg();
-  });
-
-  headerRoot.querySelector('[data-fbm-avatar-image]')?.addEventListener('dblclick', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void changeImg();
-  });
 }
 
 function mountWindowTheme(actor, root) {
@@ -449,15 +372,6 @@ function mountWindowTheme(actor, root) {
     appRoot.querySelector("[data-fbm-overload-rail]")?.remove();
     appRoot.insertAdjacentHTML("beforeend", renderOverloadRail(actor));
   }
-}
-
-function mountHeader(app, actor, root, editable) {
-  const character = root.querySelector(".character") ?? root;
-  const bio = character.querySelector(":scope > .bio.border, .bio.border") ?? character.querySelector(".bio");
-  if (!(bio instanceof HTMLElement) || bio.querySelector("[data-fbm-header-panel]")) return;
-  bio.innerHTML = renderHeader(actor, editable);
-  bio.classList.add("fbm-mortar-bio");
-  bindHeader(app, actor, bio.querySelector("[data-fbm-header-panel]"), editable);
 }
 
 function mountMainStatus(actor, root, editable) {
@@ -483,6 +397,8 @@ function mountMainStatus(actor, root, editable) {
   }
 
   if (editable) {
+    const awakening = conditions.querySelector("[data-fbm-awakening]");
+    awakening?.addEventListener("change", () => setAwakeningDate(actor, awakening.value));
     for (const button of conditions.querySelectorAll("[data-fbm-thermal]")) {
       button.addEventListener("click", () => setThermalMode(actor, button.dataset.fbmThermal));
     }
@@ -545,7 +461,6 @@ export function mountMortarSheet(app, htmlOrElement) {
   root.dataset.fbmMounted = "true";
 
   const editable = Boolean(app?.isEditable ?? actor.isOwner);
-  mountHeader(app, actor, root, editable);
   mountMainStatus(actor, root, editable);
   mountTalentConsole(app, actor, root, editable);
   replaceRestButton(actor, root, editable);
