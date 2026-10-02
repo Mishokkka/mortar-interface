@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./constants.js";
 import { getMortarState, getOverloadBand, isMortarActor } from "./state.js";
+import { getCustomThemeVars, getInterfaceTheme } from "./settings.js";
 
 let unregisterStat = null;
 let apiReadyHook = null;
@@ -18,11 +19,15 @@ function registerWith(api) {
     id: MODULE_ID,
     order: 180,
     render({ actor }) {
-      if (!isMortarActor(actor)) return "";
+      if (!isMortarActor(actor) || (!game.user?.isGM && actor?.limited)) return "";
       const state = getMortarState(actor);
       const band = getOverloadBand(actor, state);
+      const theme = getInterfaceTheme();
+      const style = theme === "custom"
+        ? Object.entries(getCustomThemeVars()).map(([name, value]) => `${name}:${value}`).join(";")
+        : "";
       return `
-        <section class="fbm-qa-stat" data-fbm-qa-stat="true">
+        <section class="fbm-qa-stat fbm-theme-${theme}" data-fbm-qa-stat="true"${style ? ` style="${escapeHtml(style)}"` : ""}>
           <div class="fbm-qa-stat__head"><strong>MORTAR CORE</strong><span class="fbm-band fbm-band--${band.key}">${band.label}</span></div>
           <div class="fbm-qa-stat__grid">
             <span>OVERLOAD</span><strong>${state.overload}/${band.max}</strong>
