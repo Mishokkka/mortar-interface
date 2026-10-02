@@ -1,5 +1,4 @@
 import {
-  FLAG_MORTAR_MARKER,
   FLAG_PARTS_DIE,
   FLAG_PARTS_TYPE,
   FLAG_STATE,
@@ -22,14 +21,12 @@ export function normalizeName(value) {
 
 export function isMortarTalent(item) {
   if (!item || item.type !== "talent") return false;
-  if (item.getFlag?.(MODULE_ID, FLAG_MORTAR_MARKER) === true) return true;
   const name = normalizeName(item.name);
   return MORTAR_NAMES.some((candidate) => normalizeName(candidate) === name);
 }
 
 export function isMortarActor(actor) {
   if (!actor || actor.documentName !== "Actor" || actor.type !== "character") return false;
-  if (actor.getFlag?.(MODULE_ID, "mortarMode") === true) return true;
   return actor.items?.some?.(isMortarTalent) ?? false;
 }
 
