@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4
+- Stop replacing the Forbidden Lands character header. Native FBL and Quick Access header controls, Reputation, Willpower helpers and fields now remain authoritative.
+- Move Mortar-only Awakening and active-passive readouts into the compact SYSTEM STATUS block on MAIN.
+- Register Quick Access integration during Foundry `init` instead of waiting for `ready`, with the existing API-ready fallback for uncertain module hook order.
+- Reattach Quick Access Talent/Spell tooltips to the custom AUXILIARY ROUTINES rows through the new public `setupTalentItemTooltips(actor, root)` API when available.
+- Add a scoped Quick Access compatibility layer so Gear cards, wallet elements, BIO, STAT and in-sheet Reputation presentation inherit the selected Mortar palette.
+- Leave Rest/Reboot interception and New Day/Critical Injury behavior unchanged.
+
 ## 0.3.3
 - Audited the module against the exact Forbidden Lands v13.0.5 character-sheet templates, CSS, ActorSheet, Actor document, Talent sheet, and roll handler.
 - Made the compact Mortar header fit the system's native 660px character sheet without hard minimum widths.
