@@ -7,6 +7,9 @@
 - Reattach Quick Access Talent/Spell tooltips to the custom AUXILIARY ROUTINES rows through the new public `setupTalentItemTooltips(actor, root)` API when available.
 - Add a scoped Quick Access compatibility layer so Gear cards, wallet elements, BIO, STAT and in-sheet Reputation presentation inherit the selected Mortar palette.
 - Leave Rest/Reboot interception and New Day/Critical Injury behavior unchanged.
+- Serialize protocol progression per Actor, lock upgrade controls while an operation is open, and revalidate EXP/rank prerequisites after dialogs before committing.
+- Add compensation for failed protocol rank/item writes so EXP and Recovery attribute changes are restored when progression cannot complete.
+- Harden stored Mortar-state normalization against malformed `structuralDamage` or `psychosis` flags.
 
 ## 0.3.3
 - Audited the module against the exact Forbidden Lands v13.0.5 character-sheet templates, CSS, ActorSheet, Actor document, Talent sheet, and roll handler.
