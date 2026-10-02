@@ -723,6 +723,19 @@
   background-color: var(--fbm-row-even) !important;
 }
 
+/* FBL v13.0.5 gives odd Item rows a fixed dark text color and Gear table
+ * headers another fixed dark color. Override both so all palettes remain
+ * legible, while preserving the system's alternating-row semantics. */
+.fbm-mortar-sheet .item-list .items .item,
+.fbm-mortar-sheet .gear-tab .gears .items > table tbody tr {
+  color: var(--fbm-text) !important;
+}
+.fbm-mortar-sheet .gear-tab .gears .items > table thead,
+.fbm-mortar-sheet .gear-tab .gears .items > table thead th {
+  color: var(--fbm-dim) !important;
+  border-color: var(--fbm-line) !important;
+}
+
 .fbm-passive.is-inactive {
   opacity: 0.42;
   filter: saturate(0.65) brightness(0.86);
