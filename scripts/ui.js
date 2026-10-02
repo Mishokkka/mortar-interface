@@ -61,7 +61,7 @@ function renderHeader(actor, editable) {
   const band = getOverloadBand(actor, state);
   const passive = state.passive && PROTOCOLS[state.passive]?.passive?.name ? PROTOCOLS[state.passive].passive.name : "—";
   const wpValue = Math.max(0, Number(actor.system?.bio?.willpower?.value) || 0);
-  const wpMax = Math.max(wpValue, Number(actor.system?.bio?.willpower?.max) || 10);
+  const wpMax = Math.max(0, Number(actor.system?.bio?.willpower?.max) || 10);
   const reputation = Math.max(0, Number(actor.system?.bio?.reputation?.value) || 0);
   const experience = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
   const kin = actor.system?.bio?.kin?.value ?? "Мортар";
@@ -74,9 +74,12 @@ function renderHeader(actor, editable) {
       <div class="fbm-header-compact__grid">
         <label class="fbm-field fbm-field--name"><span>NAME</span><input type="text" data-fbm-actor-path="name" value="${escapeHtml(actor.name)}" ${editable ? "" : "disabled"}></label>
         <label class="fbm-field fbm-field--frame"><span>FRAME</span><input type="text" data-fbm-actor-path="system.bio.kin.value" value="${escapeHtml(kin)}" ${editable ? "" : "disabled"}></label>
-        <label class="fbm-field fbm-field--num"><span>REP</span><input type="number" min="0" step="1" data-fbm-actor-path="system.bio.reputation.value" value="${reputation}" ${editable ? "" : "disabled"}></label>
+        <div class="fbm-field fbm-field--num fbm-field--reputation">
+          <button type="button" class="fbm-field-label" data-fbm-roll-reputation title="Roll Reputation" ${reputation > 0 && editable ? "" : "disabled"}><i class="fas fa-dice"></i> REP</button>
+          <input type="number" min="0" step="1" data-fbm-actor-path="system.bio.reputation.value" value="${reputation}" ${editable ? "" : "disabled"}>
+        </div>
         <label class="fbm-field fbm-field--num"><span>EXP</span><input type="number" min="0" step="1" data-fbm-actor-path="system.bio.experience.value" value="${experience}" ${editable ? "" : "disabled"}></label>
-        <label class="fbm-field fbm-field--wp"><span>WP</span><div class="fbm-wp-inline"><input type="number" min="0" step="1" data-fbm-actor-path="system.bio.willpower.value" value="${wpValue}" ${editable ? "" : "disabled"}><small>/ ${wpMax}</small></div></label>
+        <label class="fbm-field fbm-field--wp"><span>WP</span><div class="fbm-wp-inline"><input type="number" min="0" max="${wpMax}" step="1" data-fbm-actor-path="system.bio.willpower.value" value="${wpValue}" ${editable ? "" : "disabled"}><small>/ ${wpMax}</small></div></label>
         <label class="fbm-field fbm-field--awakening"><span>AWK</span><input type="text" data-fbm-awakening value="${escapeHtml(state.awakeningDate)}" placeholder="дата / год" ${editable ? "" : "disabled"}></label>
         <div class="fbm-field fbm-field--status"><span>STATUS</span><strong class="fbm-band fbm-band--${band.key}">${band.label}</strong></div>
         <div class="fbm-field fbm-field--passive"><span>PASSIVE</span><strong>${escapeHtml(passive)}</strong></div>
@@ -178,8 +181,9 @@ function renderAuxTalents(actor, snapshot, editable) {
       <img src="${escapeHtml(item.img)}" alt="">
       <strong>${escapeHtml(item.name)}</strong>
       <span>R${Number(item.system?.rank) || 0}</span>
-      ${editable ? `<button type="button" data-fbm-open-item="${item.id}"><i class="fas fa-edit"></i></button>` : ""}
-      <button type="button" data-fbm-post-item="${item.id}"><i class="fas fa-comment"></i></button>
+      ${editable ? `<button type="button" data-fbm-open-item="${item.id}" title="Edit Talent"><i class="fas fa-edit"></i></button>` : ""}
+      <button type="button" data-fbm-post-item="${item.id}" title="Post Talent"><i class="fas fa-comment"></i></button>
+      ${editable ? `<button type="button" data-fbm-delete-item="${item.id}" title="Delete Talent"><i class="fas fa-trash"></i></button>` : ""}
     </div>`).join("");
 }
 
@@ -204,7 +208,7 @@ function renderProtocols(actor, editable) {
         <div class="fbm-recovery-wrap">${renderProtocolCard(actor, "recovery", snapshot, editable)}</div>
         <div class="fbm-protocol-grid">${operational}</div>
         <section class="fbm-aux">
-          <div class="fbm-aux-title">AUXILIARY ROUTINES · GENERAL TALENTS</div>
+          <div class="fbm-aux-title"><span>AUXILIARY ROUTINES · GENERAL TALENTS</span>${editable ? `<button type="button" data-fbm-add-talent><i class="fas fa-plus"></i> TALENT</button>` : ""}</div>
           <div class="fbm-aux-list">${renderAuxTalents(actor, snapshot, editable)}</div>
         </section>
       </section>
@@ -270,18 +274,27 @@ function renderService(actor, editable) {
     </div>`;
 }
 
-function setupSubtabs(consoleRoot) {
+function setupSubtabs(app, consoleRoot) {
+  const activate = (target) => {
+    const normalized = target === "service" ? "service" : "protocols";
+    for (const peer of consoleRoot.querySelectorAll("[data-fbm-subtab]")) {
+      peer.classList.toggle("is-active", peer.dataset.fbmSubtab === normalized);
+    }
+    for (const pane of consoleRoot.querySelectorAll("[data-fbm-pane]")) {
+      pane.classList.toggle("is-active", pane.dataset.fbmPane === normalized);
+    }
+    const current = APP_STATE.get(app) ?? {};
+    APP_STATE.set(app, { ...current, subtab: normalized });
+  };
+
+  activate(APP_STATE.get(app)?.subtab ?? "protocols");
   for (const button of consoleRoot.querySelectorAll("[data-fbm-subtab]")) {
-    button.addEventListener("click", () => {
-      const target = button.dataset.fbmSubtab;
-      for (const peer of consoleRoot.querySelectorAll("[data-fbm-subtab]")) peer.classList.toggle("is-active", peer === button);
-      for (const pane of consoleRoot.querySelectorAll("[data-fbm-pane]")) pane.classList.toggle("is-active", pane.dataset.fbmPane === target);
-    });
+    button.addEventListener("click", () => activate(button.dataset.fbmSubtab));
   }
 }
 
 function bindConsole(app, actor, consoleRoot, editable) {
-  setupSubtabs(consoleRoot);
+  setupSubtabs(app, consoleRoot);
   if (!editable) {
     for (const button of consoleRoot.querySelectorAll("[data-fbm-open-item], [data-fbm-post-item]")) {
       button.addEventListener("click", () => {
@@ -312,6 +325,19 @@ function bindConsole(app, actor, consoleRoot, editable) {
   for (const button of consoleRoot.querySelectorAll("[data-fbm-post-item]")) {
     button.addEventListener("click", () => actor.items.get(button.dataset.fbmPostItem)?.sendToChat?.());
   }
+  for (const button of consoleRoot.querySelectorAll("[data-fbm-delete-item]")) {
+    button.addEventListener("click", () => actor.deleteEmbeddedDocuments("Item", [button.dataset.fbmDeleteItem]));
+  }
+  consoleRoot.querySelector("[data-fbm-add-talent]")?.addEventListener("click", async () => {
+    const key = "CONFIG.ITEMTYPE.TALENT";
+    const localized = game.i18n.localize(key);
+    const [item] = await actor.createEmbeddedDocuments("Item", [{
+      name: localized === key ? "Talent" : localized,
+      type: "talent",
+      system: { type: "general", rank: 1, description: "" }
+    }]);
+    item?.sheet?.render?.(true);
+  });
   consoleRoot.querySelector("[data-fbm-reboot]")?.addEventListener("click", () => performReboot(actor));
   consoleRoot.querySelector("[data-fbm-maintenance]")?.addEventListener("click", () => performMaintenance(actor));
   consoleRoot.querySelector("[data-fbm-cooling]")?.addEventListener("click", () => performCoolingTurn(actor));
@@ -336,7 +362,7 @@ function bindConsole(app, actor, consoleRoot, editable) {
   });
 }
 
-function mountTalentConsole(app, actor, root) {
+function mountTalentConsole(app, actor, root, editable) {
   const talentTab = root.querySelector(".talent-tab")
     ?? root.querySelector('.sheet-body > .tab[data-tab="talent"]')
     ?? root.querySelector('[data-tab="talent"]');
@@ -346,16 +372,16 @@ function mountTalentConsole(app, actor, root) {
   const existing = host.querySelector(":scope > .fbm-console, .fbm-console");
   if (existing) return;
 
-  host.innerHTML = renderProtocols(actor, actor.isOwner);
+  host.innerHTML = renderProtocols(actor, editable);
   const consoleRoot = host.querySelector(".fbm-console");
-  if (consoleRoot) bindConsole(app, actor, consoleRoot, actor.isOwner);
+  if (consoleRoot) bindConsole(app, actor, consoleRoot, editable);
 
   const nav = root.querySelector(".sheet-tabs");
   const navButton = nav?.querySelector?.('[data-tab="talent"]');
   if (navButton) navButton.textContent = "PROTOCOLS";
 }
 
-function bindHeader(actor, headerRoot, editable) {
+function bindHeader(app, actor, headerRoot, editable) {
   if (!(headerRoot instanceof HTMLElement)) return;
   if (!editable) return;
 
@@ -363,13 +389,29 @@ function bindHeader(actor, headerRoot, editable) {
     input.addEventListener('change', async () => {
       const path = input.dataset.fbmActorPath;
       if (!path) return;
-      const value = input.type === 'number' ? Math.max(0, Math.trunc(Number(input.value) || 0)) : String(input.value ?? '');
+      let value = input.type === "number" ? Math.trunc(Number(input.value) || 0) : String(input.value ?? "");
+      if (input.type === "number") {
+        const min = input.min === "" ? Number.NEGATIVE_INFINITY : Number(input.min);
+        const max = input.max === "" ? Number.POSITIVE_INFINITY : Number(input.max);
+        value = Math.max(min, Math.min(max, value));
+        input.value = String(value);
+      }
       await actor.update({ [path]: value }, { render: false });
+      if (path === "system.bio.reputation.value") {
+        const rollButton = headerRoot.querySelector("[data-fbm-roll-reputation]");
+        if (rollButton) rollButton.disabled = Number(value) <= 0;
+      }
     });
   }
 
   const awakening = headerRoot.querySelector('[data-fbm-awakening]');
   awakening?.addEventListener('change', () => setAwakeningDate(actor, awakening.value));
+
+  headerRoot.querySelector("[data-fbm-roll-reputation]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if ((Number(actor.system?.bio?.reputation?.value) || 0) > 0) void app?.rollReputation?.();
+  });
 
   const changeImg = async () => {
     const FilePickerApp = globalThis.FilePicker;
@@ -409,13 +451,13 @@ function mountWindowTheme(actor, root) {
   }
 }
 
-function mountHeader(actor, root, editable) {
+function mountHeader(app, actor, root, editable) {
   const character = root.querySelector(".character") ?? root;
   const bio = character.querySelector(":scope > .bio.border, .bio.border") ?? character.querySelector(".bio");
   if (!(bio instanceof HTMLElement) || bio.querySelector("[data-fbm-header-panel]")) return;
   bio.innerHTML = renderHeader(actor, editable);
   bio.classList.add("fbm-mortar-bio");
-  bindHeader(actor, bio.querySelector("[data-fbm-header-panel]"), editable);
+  bindHeader(app, actor, bio.querySelector("[data-fbm-header-panel]"), editable);
 }
 
 function mountMainStatus(actor, root, editable) {
@@ -429,6 +471,12 @@ function mountMainStatus(actor, root, editable) {
     }
   }
 
+  const conditionGrid = mainTab.querySelector(".conditions-grid");
+  conditionGrid?.classList.add("fbm-biological-conditions-block");
+  if (conditionGrid?.previousElementSibling?.tagName === "H2") {
+    conditionGrid.previousElementSibling.classList.add("fbm-biological-condition-heading");
+  }
+
   const conditions = mainTab.querySelector(".conditions") ?? mainTab;
   if (!conditions.querySelector(".fbm-system-status")) {
     conditions.insertAdjacentHTML("afterbegin", renderStatus(actor, editable));
@@ -439,10 +487,6 @@ function mountMainStatus(actor, root, editable) {
       button.addEventListener("click", () => setThermalMode(actor, button.dataset.fbmThermal));
     }
   }
-}
-
-function hideBiologicalConsumables(_root) {
-  // Food and water stay visible in inventory. Mortars may still carry them.
 }
 
 function replaceRestButton(actor, root, editable) {
@@ -481,9 +525,11 @@ export function mountMortarSheet(app, htmlOrElement) {
   const root = getRoot(htmlOrElement ?? app?.element);
   if (!root) return;
 
-  if (!isMortarActor(actor)) {
+  const limitedView = Boolean(actor && !game.user?.isGM && actor.limited);
+  if (!isMortarActor(actor) || limitedView) {
     const appRoot = getAppRoot(root);
     root.classList.remove("fbm-mortar-sheet");
+    delete root.dataset.fbmMounted;
     if (appRoot instanceof HTMLElement) {
       appRoot.classList.remove("fbm-mortar-window");
       appRoot.querySelector("[data-fbm-overload-rail]")?.remove();
@@ -493,16 +539,15 @@ export function mountMortarSheet(app, htmlOrElement) {
   }
 
   mountWindowTheme(actor, root);
-  const current = APP_STATE.get(app);
-  if (current?.root === root && root.dataset.fbmMounted === "true") return;
-  APP_STATE.set(app, { root, appRoot: getAppRoot(root) });
+  const current = APP_STATE.get(app) ?? {};
+  if (current.root === root && root.dataset.fbmMounted === "true") return;
+  APP_STATE.set(app, { ...current, root, appRoot: getAppRoot(root) });
   root.dataset.fbmMounted = "true";
 
-  const editable = Boolean(actor.isOwner);
-  mountHeader(actor, root, editable);
+  const editable = Boolean(app?.isEditable ?? actor.isOwner);
+  mountHeader(app, actor, root, editable);
   mountMainStatus(actor, root, editable);
-  mountTalentConsole(app, actor, root);
-  hideBiologicalConsumables(root);
+  mountTalentConsole(app, actor, root, editable);
   replaceRestButton(actor, root, editable);
 }
 
@@ -521,6 +566,7 @@ export function releaseMortarSheet(app) {
   const root = current?.root;
   const appRoot = current?.appRoot ?? getAppRoot(root);
   root?.classList?.remove("fbm-mortar-sheet");
+  if (root?.dataset) delete root.dataset.fbmMounted;
   if (appRoot instanceof HTMLElement) {
     appRoot.classList.remove("fbm-mortar-window");
     appRoot.querySelector("[data-fbm-overload-rail]")?.remove();
