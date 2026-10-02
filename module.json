@@ -1,0 +1,45 @@
+{
+  "id": "fbl-mortar-interface",
+  "title": "FBL Mortar Interface",
+  "description": "Mortar race interface and rules support for Forbidden Lands. Full-sheet theming, compact Mortar header, themed dialogs, persistent OVERLOAD rail and Protocols/Service workflow.",
+  "version": "0.3.2",
+  "authors": [
+    {
+      "name": "Mishokkka"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "forbidden-lands",
+        "type": "system",
+        "compatibility": {
+          "minimum": "13.0.5",
+          "verified": "13.0.5"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/mortar.css"
+  ],
+  "languages": [
+    {
+      "lang": "ru",
+      "name": "Русский",
+      "path": "lang/ru.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}
