@@ -283,8 +283,17 @@ function bindConsole(app, actor, consoleRoot, editable) {
     return;
   }
 
-  for (const button of consoleRoot.querySelectorAll("[data-fbm-upgrade]")) {
-    button.addEventListener("click", () => upgradeProtocol(actor, button.dataset.fbmUpgrade));
+  const upgradeButtons = [...consoleRoot.querySelectorAll("[data-fbm-upgrade]")];
+  for (const button of upgradeButtons) {
+    button.addEventListener("click", async () => {
+      if (upgradeButtons.some((entry) => entry.disabled)) return;
+      upgradeButtons.forEach((entry) => { entry.disabled = true; });
+      try {
+        await upgradeProtocol(actor, button.dataset.fbmUpgrade);
+      } finally {
+        upgradeButtons.forEach((entry) => { entry.disabled = false; });
+      }
+    });
   }
   for (const button of consoleRoot.querySelectorAll("[data-fbm-activate]")) {
     button.addEventListener("click", () => activateProtocolAbility(actor, button.dataset.protocol, Number(button.dataset.rank)));
