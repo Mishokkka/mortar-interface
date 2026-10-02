@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.3
+- Audited the module against the exact Forbidden Lands v13.0.5 character-sheet templates, CSS, ActorSheet, Actor document, Talent sheet, and roll handler.
+- Made the compact Mortar header fit the system's native 660px character sheet without hard minimum widths.
+- Restored Reputation rolling and General Talent create/edit/post/delete controls that were lost when replacing native sheet sections.
+- Preserve the PROTOCOLS/SERVICE subtab across actor-sheet rerenders.
+- Respect Foundry/FBL limited actor views and sheet editability.
+- Hide the empty native biological Conditions heading/grid while keeping Food and Water visible in Gear.
+- Fixed native FBL odd-row and Gear-header colors for dark/light Mortar themes.
+- Apply the selected Mortar theme to Quick Access and suppress Mortar details for limited viewers.
+- Require the Mechanical Body talent as the sole Mortar detection marker.
+- Keep Mortar mode synchronized when Mechanical Body is renamed, created, or deleted, and clear stale biological condition effects on startup.
+- Handle cancelled FBL repair-roll dialogs without an unhandled rejection.
+
 ## 0.3.2
 - Compacted the Mortar header to preserve sheet height and reduce empty space.
 - Removed the redundant UNIT field.
