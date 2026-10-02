@@ -59,6 +59,13 @@ export function getMortarState(actor) {
     overwrite: true
   });
 
+  if (!state.structuralDamage || typeof state.structuralDamage !== "object" || Array.isArray(state.structuralDamage)) {
+    state.structuralDamage = { strength: 0, agility: 0 };
+  }
+  if (!state.psychosis || typeof state.psychosis !== "object" || Array.isArray(state.psychosis)) {
+    state.psychosis = { active: false, remainingRounds: 0 };
+  }
+
   state.overload = Math.max(0, Math.trunc(Number(state.overload) || 0));
   state.thermal = THERMAL_MODES.includes(state.thermal) ? state.thermal : "normal";
   state.passive = OPERATIONAL_PROTOCOL_KEYS.includes(state.passive) ? state.passive : null;
