@@ -1,8 +1,8 @@
 {
   "id": "fbl-mortar-interface",
   "title": "FBL Mortar Interface",
-  "description": "Mortar race interface and rules support for Forbidden Lands. Full-sheet theming, compact FBL-compatible Mortar header, themed dialogs, persistent OVERLOAD rail and Protocols/Service workflow.",
-  "version": "0.3.3",
+  "description": "Mortar race interface and rules support for Forbidden Lands. Keeps the native character header, adds full-sheet theming, themed dialogs, a persistent OVERLOAD rail, Protocols/Service workflow and optional Quick Access integration.",
+  "version": "0.3.4",
   "authors": [
     {
       "name": "Mishokkka"
