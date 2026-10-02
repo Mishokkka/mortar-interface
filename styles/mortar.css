@@ -480,6 +480,41 @@
 .fbm-status-grid > div { padding:4px 5px; background:rgba(0,0,0,.24); border:1px solid var(--fbm-line-soft); }
 .fbm-status-grid span { display:block; color:var(--fbm-dim); font:8px/1.1 var(--fbm-font); }
 .fbm-status-grid strong { color:var(--fbm-text-bright); font:700 11px/1.4 var(--fbm-font); }
+.fbm-status-meta {
+  display:grid;
+  grid-template-columns:minmax(0, .9fr) minmax(0, 1.4fr);
+  gap:4px;
+  margin-top:4px;
+}
+.fbm-status-meta > label,
+.fbm-status-meta > div {
+  min-width:0;
+  padding:4px 5px;
+  background:var(--fbm-field-bg-2, rgba(0,0,0,.24));
+  border:1px solid var(--fbm-line-soft);
+}
+.fbm-status-meta span {
+  display:block;
+  margin-bottom:2px;
+  color:var(--fbm-dim);
+  font:700 8px/1.1 var(--fbm-font);
+}
+.fbm-status-meta strong {
+  display:block;
+  overflow:hidden;
+  color:var(--fbm-text-bright);
+  font:700 10px/1.3 var(--fbm-font);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.fbm-status-meta input {
+  width:100%;
+  min-width:0;
+  height:20px !important;
+  margin:0;
+  padding:0 4px;
+  font:700 10px/1 var(--fbm-font) !important;
+}
 .fbm-thermal-row { display:flex; align-items:center; gap:4px; margin-top:6px; }
 .fbm-thermal-row > span { margin-right:auto; color:var(--fbm-dim); font:700 9px/1 var(--fbm-font); }
 
@@ -1098,3 +1133,117 @@
   .fbm-field--status { grid-column: span 2; }
   .fbm-field--passive { grid-column: span 4; }
 }
+
+/* ===== v0.3.4 Quick Access compatibility =====
+ * Quick Access remains the owner of its Gear/STAT/BIO widgets. Mortar only
+ * supplies theme tokens and narrowly scoped visual overrides inside a Mortar
+ * sheet; it does not import or rewrite Quick Access internals.
+ */
+.fbm-mortar-sheet.fblqa-sheet-root {
+  --fblqa-border-soft: var(--fbm-line-soft);
+  --fblqa-border-medium: var(--fbm-line);
+  --fblqa-border-strong: var(--fbm-line-strong);
+  --fblqa-bg-paper: var(--fbm-panel);
+  --fblqa-card-bg: var(--fbm-panel-2);
+  --fblqa-card-border: var(--fbm-line);
+  --fblqa-gold-soft: var(--fbm-line-soft);
+  --fblqa-gold-strong: var(--fbm-line-strong);
+  --fblqa-silver-soft: var(--fbm-line-soft);
+  --fblqa-silver-strong: var(--fbm-line);
+  --fblqa-copper-soft: var(--fbm-line-soft);
+  --fblqa-copper-strong: var(--fbm-line);
+  --fblqa-context-bg: var(--fbm-panel-2);
+  --fblqa-context-border: var(--fbm-line);
+  --fblqa-context-text: var(--fbm-text);
+  --fblqa-context-hover-bg: var(--fbm-panel-3);
+  --fblqa-context-hover-text: var(--fbm-text-bright);
+  --fblqa-rest-bg: var(--fbm-panel);
+  --fblqa-rest-bg-soft: var(--fbm-panel-2);
+  --fblqa-rest-border: var(--fbm-line);
+  --fblqa-rest-text: var(--fbm-text);
+  --fblqa-rest-muted: var(--fbm-dim);
+}
+
+.fbm-mortar-sheet :is(
+  .fblqa-panel,
+  .fblqa-gear-card,
+  .fblqa-wallet-popover,
+  .fblqa-encumbrance,
+  .fblqa-slot,
+  .fblqa-reputation-note-summary
+) {
+  color:var(--fbm-text) !important;
+  border-color:var(--fbm-line) !important;
+}
+
+.fbm-mortar-sheet .fblqa-gear-card,
+.fbm-mortar-sheet .fblqa-wallet-popover,
+.fbm-mortar-sheet .fblqa-reputation-note-summary {
+  background:var(--fbm-panel-2) !important;
+}
+
+.fbm-mortar-sheet .fblqa-slot,
+.fbm-mortar-sheet .fblqa-encumbrance {
+  background:var(--fbm-field-bg-2) !important;
+}
+
+.fbm-mortar-sheet .fblqa-gear-card-top,
+.fbm-mortar-sheet .fblqa-gear-card-stat + .fblqa-gear-card-stat,
+.fbm-mortar-sheet .fblqa-reputation-note-summary header {
+  border-color:var(--fbm-line-soft) !important;
+}
+
+.fbm-mortar-sheet .fblqa-biography-tab .fblqa-bio-shell {
+  --fblqa-bio-ink: var(--fbm-text);
+  --fblqa-bio-muted: var(--fbm-dim);
+  --fblqa-bio-line: var(--fbm-line-soft);
+  color:var(--fbm-text) !important;
+}
+
+.fbm-mortar-sheet .fblqa-biography-tab :is(
+  .fblqa-bio-title,
+  .fblqa-rich-preview,
+  .fblqa-legacy-content,
+  .fblqa-bio-empty
+) {
+  color:var(--fbm-text) !important;
+}
+
+.fbm-mortar-sheet .fblqa-biography-tab :is(
+  input,
+  select,
+  textarea,
+  .fblqa-rich-editor-shell,
+  prose-mirror
+) {
+  border-color:var(--fbm-line) !important;
+  color:var(--fbm-text-bright) !important;
+}
+
+.fbm-mortar-sheet .fblec-stat-tab {
+  color:var(--fbm-text) !important;
+  background:transparent !important;
+}
+
+.fbm-mortar-sheet .fblec-stat-tab [data-row-kind],
+.fbm-mortar-sheet .fblec-stat-tab .condition-row {
+  color:var(--fbm-text) !important;
+  background:var(--fbm-panel-2) !important;
+  border-color:var(--fbm-line-soft) !important;
+}
+
+.fbm-mortar-sheet .fblec-stat-tab :is(input, select, textarea, button) {
+  color:var(--fbm-text-bright) !important;
+  background:var(--fbm-field-bg) !important;
+  border-color:var(--fbm-line) !important;
+}
+
+.fbm-mortar-sheet [data-fbm-awakening]:disabled {
+  cursor:default;
+  opacity:.66;
+}
+
+@media (max-width: 720px) {
+  .fbm-status-meta { grid-template-columns:1fr; }
+}
+
