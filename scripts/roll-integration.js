@@ -49,7 +49,12 @@ export function installRollIntegration() {
       }
     }
 
-    if (identifiers.length === 1 && ids.has("armor")) {
+    // FBL v13.0.5 passes equipped armor Item IDs together with the "armor"
+    // identifier for the TOTAL armor roll. Restricting this to a single
+    // identifier silently drops the innate chassis as soon as worn armor exists.
+    // The chassis is permanent actor armor, so it participates in every armor
+    // roll, including a manually rolled specific armor piece.
+    if (ids.has("armor")) {
       modifiers.push({
         name: "MORTAR · INTEGRATED CHASSIS",
         value: String(getIntegratedArmor(this, state)),
