@@ -118,7 +118,7 @@ export function applyThemeClass(element, theme = getInterfaceTheme()) {
 
 export function applyThemeToOpenSheets(theme) {
   const normalized = normalizeTheme(theme);
-  for (const element of document.querySelectorAll(".fbm-mortar-window, .fbm-mortar-sheet, .fbm-mortar-dialog-window")) {
+  for (const element of document.querySelectorAll(".fbm-mortar-window, .fbm-mortar-sheet, .fbm-mortar-dialog-window, .fbm-qa-stat")) {
     applyThemeClass(element, normalized);
   }
 }
