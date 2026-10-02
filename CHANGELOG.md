@@ -12,6 +12,8 @@
 - Require the Mechanical Body talent as the sole Mortar detection marker.
 - Keep Mortar mode synchronized when Mechanical Body is renamed, created, or deleted, and clear stale biological condition effects on startup.
 - Handle cancelled FBL repair-roll dialogs without an unhandled rejection.
+- Fix innate chassis armor so it remains part of native FBL armor rolls when equipped armor Item IDs are included in the roll identifiers.
+- Replace remaining native parchment panel borders with theme-aware terminal lines and compact the stock FBL tab bar.
 
 ## 0.3.2
 - Compacted the Mortar header to preserve sheet height and reduce empty space.
