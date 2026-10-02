@@ -565,7 +565,16 @@ export async function rollRepair(actor, { type = "common", attribute = "strength
     gears: actor.items?.filter?.((item) => item.type === "gear" && !item.isBroken) ?? []
   };
 
-  await game.fbl.roll(data, options);
+  try {
+    // FBL v13.0.5 FBLRollHandler.render() resolves only after the roll dialog
+    // submits and the chat message is created. Cancellation rejects the promise.
+    await game.fbl.roll(data, options);
+  } catch (error) {
+    if (error?.message !== "Roll cancelled") {
+      console.warn(`${MODULE_ID} | repair roll did not resolve`, error);
+    }
+    return;
+  }
 
   const degrade = await legacyPrompt({
     title: localize("ResourceDie", "Resource Die"),
