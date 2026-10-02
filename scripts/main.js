@@ -17,6 +17,7 @@ import { registerMortarSettings } from "./settings.js";
 
 Hooks.once("init", () => {
   registerMortarSettings();
+  initializeQuickAccessIntegration();
 
   const module = game.modules.get(MODULE_ID);
   if (!module) return;
@@ -34,7 +35,6 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   installRollIntegration();
-  initializeQuickAccessIntegration();
 
   // Actors that already had Mechanical Body before the module was enabled may
   // still carry biological condition effects. Clear them once on startup.
