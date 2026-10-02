@@ -2,7 +2,6 @@ export const MODULE_ID = "fbl-mortar-interface";
 export const MODULE_TITLE = "FBL Mortar Interface";
 
 export const FLAG_STATE = "state";
-export const FLAG_MORTAR_MARKER = "mortarMarker";
 export const FLAG_PARTS_TYPE = "partsType";
 export const FLAG_PARTS_DIE = "resourceDie";
 export const FLAG_MECHANICAL_INJURY = "mechanicalInjury";
