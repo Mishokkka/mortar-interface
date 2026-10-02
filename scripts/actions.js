@@ -19,6 +19,18 @@ import {
   setPartsDie
 } from "./state.js";
 
+const PROTOCOL_OPERATIONS = new WeakSet();
+
+async function withProtocolOperation(actor, operation) {
+  if (!actor || PROTOCOL_OPERATIONS.has(actor)) return false;
+  PROTOCOL_OPERATIONS.add(actor);
+  try {
+    return await operation();
+  } finally {
+    PROTOCOL_OPERATIONS.delete(actor);
+  }
+}
+
 function localize(key, fallback) {
   const value = game.i18n.localize(`${MODULE_ID}.${key}`);
   return value === `${MODULE_ID}.${key}` ? fallback : value;
@@ -230,41 +242,83 @@ async function confirmXpSpend(actor, title, cost, detail = "") {
   return result === true;
 }
 
-export async function upgradeProtocol(actor, key) {
+async function upgradeProtocolUnlocked(actor, key) {
   const item = getProtocolItem(actor, key);
-  if (!item) return installProtocol(actor, key);
+  if (!item) return installProtocolUnlocked(actor, key);
+
   const current = getProtocolRank(actor, key);
-  if (current >= 5) return;
+  if (current >= 5) return false;
+
   const target = current + 1;
   const cost = getProtocolUpgradeCost(key, target);
-  if (!(await confirmXpSpend(actor, `${PROTOCOLS[key].name} · RANK ${target}`, cost, `Повысить Rank ${current} → ${target}.`))) return;
+  if (!(await confirmXpSpend(actor, `${PROTOCOLS[key].name} · RANK ${target}`, cost, `Повысить Rank ${current} → ${target}.`))) return false;
 
   let attribute = null;
   if (key === "recovery" && target >= 3) {
     attribute = await chooseRecoveryAttribute(actor);
-    if (!attribute) return;
+    if (!attribute) return false;
   }
 
-  const xp = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
-  const actorUpdate = { "system.bio.experience.value": xp - cost };
+  // Dialogs are asynchronous. Re-read progression and EXP immediately before
+  // committing so a manual edit or another client cannot make the confirmed
+  // snapshot stale.
+  const liveItem = getProtocolItem(actor, key);
+  const liveRank = getProtocolRank(actor, key);
+  const liveXp = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
+  if (!liveItem || liveItem.id !== item.id || liveRank !== current) {
+    ui.notifications.warn("Protocol state changed while the upgrade dialog was open. Try again.");
+    return false;
+  }
+  if (liveXp < cost) {
+    ui.notifications.warn(`Недостаточно EXP: требуется ${cost}, доступно ${liveXp}.`);
+    return false;
+  }
+
+  const actorUpdate = { "system.bio.experience.value": liveXp - cost };
   if (attribute) {
-    const data = actor.system.attribute[attribute];
-    const oldMax = Number(data.max) || 0;
+    const data = actor.system?.attribute?.[attribute];
+    const oldMax = Number(data?.max) || 0;
+    if (!data || oldMax >= 6) {
+      ui.notifications.warn("Выбранный Attribute больше нельзя повысить.");
+      return false;
+    }
     actorUpdate[`system.attribute.${attribute}.max`] = Math.min(6, oldMax + 1);
     actorUpdate[`system.attribute.${attribute}.value`] = Math.min(6, (Number(data.value) || 0) + 1);
   }
+
+  const rollback = { "system.bio.experience.value": liveXp };
+  if (attribute) {
+    const data = actor.system.attribute[attribute];
+    rollback[`system.attribute.${attribute}.max`] = Number(data.max) || 0;
+    rollback[`system.attribute.${attribute}.value`] = Number(data.value) || 0;
+  }
+
   await actor.update(actorUpdate, { render: false });
-  await item.update({ "system.rank": target });
+  try {
+    await liveItem.update({ "system.rank": target });
+  } catch (error) {
+    try {
+      await actor.update(rollback, { render: false });
+    } catch (rollbackError) {
+      console.error(`${MODULE_ID} | protocol upgrade rollback failed`, rollbackError);
+    }
+    throw error;
+  }
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="fbm-chat"><h3>${escapeHtml(PROTOCOLS[key].name)} · RANK ${target}</h3><p>-${cost} EXP.${attribute ? ` ${attribute.toUpperCase()} +1.` : ""}</p></div>`
   });
+  return true;
 }
 
-export async function installProtocol(actor, key) {
+export async function upgradeProtocol(actor, key) {
+  return withProtocolOperation(actor, () => upgradeProtocolUnlocked(actor, key));
+}
+
+async function installProtocolUnlocked(actor, key) {
   const protocol = PROTOCOLS[key];
-  if (!protocol || getProtocolItem(actor, key)) return;
+  if (!protocol || getProtocolItem(actor, key)) return false;
 
   if (key === "recovery") {
     const created = await actor.createEmbeddedDocuments("Item", [{
@@ -274,13 +328,13 @@ export async function installProtocol(actor, key) {
       flags: { [MODULE_ID]: { protocolKey: key } }
     }]);
     created?.[0]?.sheet?.render?.(true);
-    return;
+    return Boolean(created?.[0]);
   }
 
   const recoveryRank = getProtocolRank(actor, "recovery");
   if (recoveryRank < 2) {
     ui.notifications.warn("Первый Operational Protocol открывается только с Recovery Protocol Rank 2.");
-    return;
+    return false;
   }
 
   const known = knownOperationalProtocols(actor);
@@ -296,37 +350,95 @@ export async function installProtocol(actor, key) {
   if (known.length > 0) {
     if (recoveryRank < 3) {
       ui.notifications.warn("Дополнительные Operational Protocols открываются с Recovery Protocol Rank 3.");
-      return;
+      return false;
     }
     const last = order[order.length - 1] ?? known[known.length - 1];
     if (last && getProtocolRank(actor, last) < 3) {
       ui.notifications.warn(`Сначала развей последний открытый ${PROTOCOLS[last].name} до Rank 3.`);
-      return;
+      return false;
     }
     cost = 5;
-    if (!(await confirmXpSpend(actor, `${protocol.name} · RANK 1`, cost, "Открыть новый Operational Protocol."))) return;
+    if (!(await confirmXpSpend(actor, `${protocol.name} · RANK 1`, cost, "Открыть новый Operational Protocol."))) return false;
   }
 
-  if (cost) {
-    const xp = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
-    await actor.update({ "system.bio.experience.value": xp - cost }, { render: false });
+  // Revalidate all mutable prerequisites after the confirmation dialog.
+  if (getProtocolItem(actor, key)) {
+    ui.notifications.warn("Этот Protocol уже был установлен.");
+    return false;
   }
-  await actor.createEmbeddedDocuments("Item", [{
-    name: protocol.name,
-    type: "talent",
-    system: { type: "general", rank: 1, description: "" },
-    flags: { [MODULE_ID]: { protocolKey: key } }
-  }]);
+  const liveRecoveryRank = getProtocolRank(actor, "recovery");
+  const liveKnown = knownOperationalProtocols(actor);
+  if (liveRecoveryRank < 2 || (liveKnown.length > 0 && liveRecoveryRank < 3)) {
+    ui.notifications.warn("Условия установки Protocol изменились. Попробуй снова.");
+    return false;
+  }
+  if (liveKnown.length > 0) {
+    const liveState = getMortarState(actor);
+    const liveOrder = [...liveState.operationalOrder];
+    for (const existingKey of liveKnown) if (!liveOrder.includes(existingKey)) liveOrder.push(existingKey);
+    const last = liveOrder[liveOrder.length - 1] ?? liveKnown[liveKnown.length - 1];
+    if (last && getProtocolRank(actor, last) < 3) {
+      ui.notifications.warn(`Сначала развей последний открытый ${PROTOCOLS[last].name} до Rank 3.`);
+      return false;
+    }
+  }
 
-  order.push(key);
-  const patch = { operationalOrder: [...new Set(order)] };
-  if (!state.passive) patch.passive = key;
-  await setMortarState(actor, patch);
+  const liveXp = Math.max(0, Number(actor.system?.bio?.experience?.value) || 0);
+  if (cost && liveXp < cost) {
+    ui.notifications.warn(`Недостаточно EXP: требуется ${cost}, доступно ${liveXp}.`);
+    return false;
+  }
+
+  if (cost) await actor.update({ "system.bio.experience.value": liveXp - cost }, { render: false });
+
+  let createdItem = null;
+  try {
+    const created = await actor.createEmbeddedDocuments("Item", [{
+      name: protocol.name,
+      type: "talent",
+      system: { type: "general", rank: 1, description: "" },
+      flags: { [MODULE_ID]: { protocolKey: key } }
+    }]);
+    createdItem = created?.[0] ?? null;
+    if (!createdItem) throw new Error("Protocol item creation returned no Item");
+
+    const nextState = getMortarState(actor);
+    const nextOrder = [...nextState.operationalOrder];
+    for (const existingKey of knownOperationalProtocols(actor)) {
+      if (existingKey !== key && !nextOrder.includes(existingKey)) nextOrder.push(existingKey);
+    }
+    if (!nextOrder.includes(key)) nextOrder.push(key);
+
+    const patch = { operationalOrder: [...new Set(nextOrder)] };
+    if (!nextState.passive) patch.passive = key;
+    await setMortarState(actor, patch);
+  } catch (error) {
+    if (createdItem) {
+      try {
+        await actor.deleteEmbeddedDocuments("Item", [createdItem.id], { render: false });
+      } catch (rollbackError) {
+        console.error(`${MODULE_ID} | protocol install item rollback failed`, rollbackError);
+      }
+    }
+    if (cost) {
+      try {
+        await actor.update({ "system.bio.experience.value": liveXp }, { render: false });
+      } catch (rollbackError) {
+        console.error(`${MODULE_ID} | protocol install EXP rollback failed`, rollbackError);
+      }
+    }
+    throw error;
+  }
 
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
     content: `<div class="fbm-chat"><h3>${escapeHtml(protocol.name)} · RANK 1</h3><p>${cost ? `-${cost} EXP.` : "Первый Operational Protocol получен через Recovery Protocol Rank 2."}</p></div>`
   });
+  return true;
+}
+
+export async function installProtocol(actor, key) {
+  return withProtocolOperation(actor, () => installProtocolUnlocked(actor, key));
 }
 
 export async function activateProtocolAbility(actor, key, rank) {
